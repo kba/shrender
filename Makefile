@@ -2,10 +2,13 @@ SCRIPT = shrender
 VERSION = 0.0.1
 
 MKDIR = mkdir -p
-CP = cp -rvf
+CP = cp -rvfa
 
+PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 SHAREDIR=$(PREFIX)/share/$(SCRIPT)
+
+.PHONY: test
 
 install: 
 	$(MKDIR) $(SHAREDIR)
@@ -19,4 +22,4 @@ uninstall:
 	$(RM) $(SHAREDIR)
 
 test:
-	./test/tsht
+	SHLOG_USE_STYLES_STDERR=false SHLOG_FORMAT="    #%level %module %msg" ./test/tsht |tap-spec

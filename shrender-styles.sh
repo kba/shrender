@@ -4,9 +4,6 @@
 ##
 declare -Agx EXT_TO_RENDER_FUNC
 
-## ### cat
-##
-## * Echo the lines. Just like INCLUDE
 ##
 ## File Extensions:
 ##

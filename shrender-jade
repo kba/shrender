@@ -11,7 +11,7 @@ shrender-jade () {
     export SHRENDER_JADE=${SHRENDER_JADE:-jade}
     [[ -z "$1" ]] && { usage; exit; }
     # shellcheck disable=2094
-    jade -p "$1" -P < "$1" |sed -n '2,$p'
+    jade -p "$1" -P < "$1" | sed -n -e '2,$p' -e '$a \\n'
 }
 
 if [[ "${BASH_SOURCE[0]}" = "$0" ]];then

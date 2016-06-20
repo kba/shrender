@@ -1,0 +1,9 @@
+#!/usr/bin/env tsht
+
+BINARY="../../../shrender"
+
+actual=$($BINARY -op '<!-- ' -os ' -->' -ip '#' input)
+
+plan 1
+
+equals_file "$actual" expected "input output prefix suffix"

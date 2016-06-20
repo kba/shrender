@@ -4,9 +4,11 @@ set -e
 source "$(which shlog)"
 
 typeset -Axg EXT_TO_RENDER_PREFIX=(
-    [sh]="##"
-    [zsh]="##"
-    [bash]="##"
+    [sh]="## \?"
+    [zsh]="## \?"
+    [bash]="## \?"
+    [java]="\*\* \?"
+    [cpp]="\*\* \?"
 )
 
 usage () {
@@ -14,10 +16,8 @@ usage () {
 }
 
 shrender-prefix() {
-    local prefix
     while [[ "$1" = -* ]];do
         case "$1" in
-            -p|--prefix) prefix="$2"; shift ;;
             *) shlog -l error -x 7 "Unknown option '$1' to shrender-prefix" ;;
         esac
         shift
@@ -25,18 +25,20 @@ shrender-prefix() {
     [[ -z "$1" ]] && { usage; exit; }
     shlog -l trace "Rendering '$1'"
     local renderfile="$1"
-    local ext=${renderfile##*/}
-    ext=${ext##*.}
-    shlog -l debug "Derive render prefix from extension '$ext'"
-    local prefix="${EXT_TO_RENDER_PREFIX[$ext]}"
-    if [[ -z "$prefix" ]];then
+    if [[ -z "$INPUT_PREFIX" ]];then
+        local ext=${renderfile##*/}
+        ext=${ext##*.}
+        shlog -l debug "Derive render prefix from extension '$ext'"
+        INPUT_PREFIX="${EXT_TO_RENDER_PREFIX[$ext]}"
+    fi
+    if [[ -z "$INPUT_PREFIX" ]];then
         shlog -l debug "Cannot derive render prefix from '$ext'."
         shlog -l debug "Falling back to renderprefix='##'."
         shlog -l debug "Define EXT_TO_RENDER_PREFIX[$ext]='...' to override.\n"
-        prefix='##'
+        INPUT_PREFIX='##'
     fi
-    shlog -l info "Rendering '$renderfile' by prefix '$prefix'"
-    grep "^\s*$prefix" "$1" | sed "s/^\s*$prefix\s\?//"
+    shlog -l info "Rendering '$renderfile' by prefix '$INPUT_PREFIX'"
+    grep "^\s*$INPUT_PREFIX" "$1" | sed "s/^\s*$INPUT_PREFIX//"
 }
 
 if [[ "${BASH_SOURCE[0]}" = "$0" ]];then

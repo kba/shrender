@@ -1,0 +1,9 @@
+#!/usr/bin/env tsht
+BINARY="../../../shrender"
+
+
+plan 1
+
+output=$($BINARY input.java)
+
+equals_file "$output" expected "double-asterisk-space prefix for *.java"

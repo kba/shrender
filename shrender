@@ -8,7 +8,7 @@
 SHRENDERSHARE="$(dirname "$0")"
 
 # logging
-export PATH="$PATH:$SHRENDERSHARE/deps/shlog"
+export PATH="$PATH:$SHRENDERSHARE/deps/shlog/dist"
 source "$(which shlog)"
 
 # Extension to XY mappings
@@ -22,65 +22,42 @@ declare -Agx EXT_TO_RENDER_FUNC=(
 )
 typeset -axg SHRENDER_PATH=("$PWD")
 
+source "$SHRENDERSHARE/shrender-cat"
 source "$SHRENDERSHARE/shrender-jade"
 source "$SHRENDERSHARE/shrender-prefix"
 
 set -e
+export OUTPUT_PREFIX OUTPUT_SUFFIX INPUT_PREFIX INPUT_SUFFIX COLUMNIZE COLUMN_CHAR
 
+#help:
+#help:Usage: shrender [opts...] [render-opts] <file-to-render>...
+#help:
 usage () {
-    echo "Usage: shrender [opts...] <file-to-render>...
-
-    Options:
-
-        -f --func RENDERFUNC    Use this render func
-        "
-}
-
-shrender-cat() {
-    cat "$1"
-}
-
-shrender-load-profile () {
-    for profile in "$SHRENDERSHARE/shrender.profile" "/etc/default/shrender" "$PWD/.shrenderrc";do
-        if [[ -e "$profile" ]];then source "$profile";fi
-    done
-    return
-}
-
-shrender-resolve-file() {
-    local f=$1
-    for dir in "${SHRENDER_PATH[@]}";do
-        fabs="$dir/$f"
-        if [[ -e "$fabs" ]];then
-            echo "$fabs"
-            return
-        fi
-    done
-    shlog -l error -x 2 "No file found in includes: $renderfile"
-}
-
-shrender-function-for-extension() {
-    local f="$1"
-    local ext=$(basename "$f"|sed 's/.*\.//')
-    shlog -l debug "Detecting render function by extension '$ext'"
-    local renderfunc="${EXT_TO_RENDER_FUNC[$ext]}"
-    if [[ -z "$renderfunc" ]];then
-        shlog -l debug "RENDER: Fall back to 'prefix' render function"
-        renderfunc='prefix'
-    fi
-    echo "$renderfunc"
+    SHLOG_SILENT=true bash "$0" -ip '#help:' "$0"
 }
 
 shrender() {
-    local renderfile renderfunc renderfile_abs
-    #man: ## OPTIONS
+    local renderfile renderfunc renderfile_abs 
+    #help:  
+    #help:    Options:
+    #help:  
     while [[ "$1" = -* ]];do
         case "$1" in
-            #help:|-f,--func FUNCTION|Render function
+            #help:\t-f --function \e[33mFUNC[0m\t\tRender function
             -f|--func*) renderfunc="$2"; shift ;;
-            #help:|-p,--path PATH|Add path to shrenders search path
+            #help:\t-p --path \e[33mPATH[0m\t\t\tAdd path to shrenders search path
             -p|--path) SHRENDER_PATH+=("$2"); shift ;;
-            *) break ;;
+            #help:\t-c --column \e[33mCHAR[0m\t\tColumnize at this char.
+            -c|--column) COLUMNIZE=true; COLUMN_CHAR="$2"; shift ;;
+            #help:\t-is --input-suffix \e[33mSUFFIX[0m\tThe pattern to filter input lines with.
+            -ip|--input-prefix) INPUT_PREFIX="$2"; shift ;;
+            #help:\t-is --input-suffix \e[33mPREFIX[0m\tOptional suffix in input lines to be removed
+            -is|--input-suffix) INPUT_SUFFIX="$2"; shift ;;
+            #help:\t-op --output-prefix \e[33mPREFIX\e[0m\tPrepend output lines with this string.
+            -op|--output-prefix) OUTPUT_PREFIX="$2"; shift ;;
+            #help:\t-os --output-suffix \e[33mSUFFIX[0m\tAppend this string to output lines.
+            -os|--output-suffix) OUTPUT_SUFFIX+="$2"; shift ;;
+            *) shlog -l error -x 87 "No such option '$1'" ;;
         esac
         shift
     done
@@ -108,12 +85,57 @@ shrender() {
             gsub(\"__CURFILE__\",\"$renderfile\",\$0);
             print
         }" < "$renderfile_abs" > "$tempfile"
-        "shrender-$renderfunc" "$tempfile"
-        if (( $? > 0 ));then
-            shlog -l error -x 7 "Rendering failed."
+        output=$(
+            local IFS=$'\n'
+            local line;
+            "shrender-$renderfunc" "$tempfile" |while read -r line;do
+                printf "%s%s%s\n" "$OUTPUT_PREFIX" "$line" "$OUTPUT_SUFFIX"
+            done)
+        if [[ ! -z "$COLUMN_CHAR" ]];then
+            output=$(echo "$output" |column -ets"$COLUMN_CHAR")
         fi
+        if (( $? > 0 ));then
+            shlog -l error -x 7 "Rendering failed: $output"
+        fi
+        echo -e "$output"
     done
 }
+
+shrender-load-profile () {
+    for profile in "$SHRENDERSHARE/shrender.profile" "/etc/default/shrender" "$PWD/.shrenderrc";do
+        if [[ -e "$profile" ]];then source "$profile";fi
+    done
+    return
+}
+
+shrender-resolve-file() {
+    local f=$1
+    if [[ -e "$f" ]];then
+        echo "$f"
+        return
+    fi
+    for dir in "${SHRENDER_PATH[@]}";do
+        fabs="$dir/$f"
+        if [[ -e "$fabs" ]];then
+            echo "$fabs"
+            return
+        fi
+    done
+    shlog -l error -x 2 "No file found in includes: $renderfile"
+}
+
+shrender-function-for-extension() {
+    local f="$1"
+    local ext=$(basename "$f"|sed 's/.*\.//')
+    shlog -l debug "Detecting render function by extension '$ext'"
+    local renderfunc="${EXT_TO_RENDER_FUNC[$ext]}"
+    if [[ -z "$renderfunc" ]];then
+        shlog -l trace "Default to 'prefix' render function"
+        renderfunc='prefix'
+    fi
+    echo "$renderfunc"
+}
+
 
 if [[ "${BASH_SOURCE[0]}" = "$0" ]];then
     shrender "$@"

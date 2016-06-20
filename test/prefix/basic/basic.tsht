@@ -1,7 +1,8 @@
 #!/usr/bin/env tsht
-BINARY="../../shrender"
+BINARY="../../../shrender"
 
-use colordiff
+use diff
 
+$BINARY to-render.sh
 plan 1
 equals_file "$($BINARY to-render.sh)" expected "Render prefix"

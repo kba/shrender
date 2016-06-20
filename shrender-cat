@@ -1,0 +1,15 @@
+#!/bin/bash
+
+## ### cat
+##
+## * Echo the lines. Just use `cat(1)`.
+##
+shrender-cat() {
+    cat "$1"
+}
+
+if [[ "${BASH_SOURCE[0]}" = "$0" ]];then
+    shrender-cat "$@"
+else
+    export -f shrender-cat
+fi
