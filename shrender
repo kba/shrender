@@ -7,7 +7,9 @@
 
 set -e
 
+SHRENDERSHARE="$(dirname "$0")"
 # logging
+PATH="$PATH:$SHRENDERSHARE/deps/shlog/dist"
 source "$(which shlog)"
 
 # Extension to render function (default is prefix)
