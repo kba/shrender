@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -e
+source "$(which shlog)"
+
+usage () {
+    echo "Usage: shrender-jade <file.jade>"
+}
+
+shrender-jade () {
+    export SHRENDER_JADE=${SHRENDER_JADE:-jade}
+    [[ -z "$1" ]] && { usage; exit; }
+    # shellcheck disable=2094
+    jade -p "$1" -P < "$1" |sed -n '2,$p'
+}
+
+if [[ "${BASH_SOURCE[0]}" = "$0" ]];then
+    shrender-jade "$@"
+else
+    export -f shrender-jade
+fi

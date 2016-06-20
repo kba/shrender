@@ -1,7 +1,8 @@
+#!/bin/bash
 ##
 ## ## RENDER STYLES
 ##
-
+declare -Agx EXT_TO_RENDER_FUNC
 
 ## ### cat
 ##

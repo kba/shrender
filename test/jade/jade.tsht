@@ -1,0 +1,11 @@
+#!/usr/bin/env tsht
+
+
+BINARY="../../shrender"
+source "$(which shlog)"
+export SHLOG_FORMAT="# ${SHLOG_FORMAT}"
+export SHLOG_USE_STYLES_STDERR=false
+
+# use colordiff
+
+equals_file "$($BINARY sample.jade)" expected "Render jade"

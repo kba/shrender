@@ -1,0 +1,46 @@
+#!/bin/bash
+
+set -e
+source "$(which shlog)"
+
+typeset -Axg EXT_TO_RENDER_PREFIX=(
+    [sh]="##"
+    [zsh]="##"
+    [bash]="##"
+)
+
+usage () {
+    echo "Usage: shrender-prefix [-p PREFIX] <file-to-render>"
+}
+
+shrender-prefix() {
+    local prefix
+    while [[ "$1" = -* ]];do
+        case "$1" in
+            -p|--prefix) prefix="$2"; shift ;;
+            *) shlog -l error -x 7 "Unknown option '$1' to shrender-prefix" ;;
+        esac
+        shift
+    done
+    [[ -z "$1" ]] && { usage; exit; }
+    shlog -l trace "Rendering '$1'"
+    local renderfile="$1"
+    local ext=${renderfile##*/}
+    ext=${ext##*.}
+    shlog -l debug "Derive render prefix from extension '$ext'"
+    local prefix="${EXT_TO_RENDER_PREFIX[$ext]}"
+    if [[ -z "$prefix" ]];then
+        shlog -l debug "Cannot derive render prefix from '$ext'."
+        shlog -l debug "Falling back to renderprefix='##'."
+        shlog -l debug "Define EXT_TO_RENDER_PREFIX[$ext]='...' to override.\n"
+        prefix='##'
+    fi
+    shlog -l info "Rendering '$renderfile' by prefix '$prefix'"
+    grep "^\s*$prefix" "$1" | sed "s/^\s*$prefix\s\?//"
+}
+
+if [[ "${BASH_SOURCE[0]}" = "$0" ]];then
+    shrender-prefix "$@"
+else
+    export -f shrender-prefix
+fi

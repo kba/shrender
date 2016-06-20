@@ -1,0 +1,7 @@
+#!/usr/bin/env tsht
+BINARY="../../shrender"
+
+use colordiff
+
+plan 1
+equals_file "$($BINARY to-render.sh)" expected "Render prefix"
