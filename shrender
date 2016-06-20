@@ -1,0 +1,123 @@
+#!/bin/bash
+
+## Renders a file to markdown using a [shell expression](#render_ext).
+
+## The render method is determined by the file extension, see 
+## [RENDER STYLES](#render-styles) for a list of render methods
+
+## Runs on **first** pass
+
+typeset -A EXT_TO_RENDER_FUNC
+export EXT_TO_RENDER_FUNC=()
+typeset -A EXT_TO_RENDER_PREFIX
+export EXT_TO_RENDER_PREFIX=()
+typeset -a SHRENDER_PATH
+export SHRENDER_PATH=()
+SHRENDER_PATH+=("$PWD")
+
+set -e
+
+_debug() {
+    echo -e "**DEBUG** : $*" >&2
+}
+
+_error() {
+    echo -e "**ERROR**: $*" >&2
+    exit 1
+}
+
+load_profile() {
+    for profile in "$PWD/shrender.profile" "/etc/default/shrender";do
+        if [[ -e "$profile" ]];then
+            source "$profile"
+        fi
+    done
+}
+
+resolve_file() {
+    local f=$1
+    for dir in "${SHRENDER_PATH[@]}";do
+        fabs="$dir/$f"
+        if [[ -e "$fabs" ]];then
+            echo "$fabs"
+            return
+        fi
+    done
+    _error "No file found in includes: $renderfile"
+    return 1
+}
+
+render_func_for_file() {
+    local f="$1"
+    local ext=$(basename "$f"|sed 's/.*\.//')
+    _debug 1 "RENDER: Detecting render function by extension '$ext'"
+    local renderfunc="${EXT_TO_RENDER_FUNC[$ext]}"
+    if [[ -z "$renderfunc" ]];then
+        _debug 1 "RENDER: Fall back to 'prefix' render function"
+        renderfunc='prefix'
+    fi
+    echo "$renderfunc"
+}
+
+render() {
+    local renderfile="${!#}"
+    for renderfile in "$@";do
+        if [[ -z "$renderfunc" ]];then
+            renderfunc="$(render_func_for_file "$renderfile")"
+        fi
+        if ! declare -f "_render_$renderfunc" >/dev/null;then
+            _error "Undefined render function '$renderfunc'."
+        fi
+        # _render_prefix
+        # _render_jade
+        local renderfile_abs=$(resolve_file "$renderfile")
+        _debug 1 "RENDER: Rendering $renderfile_abs"
+        _debug 0 "_render_$renderfunc '$*'"
+        "_render_$renderfunc" "$renderfile_abs"
+        if (( $? > 0 ));then
+            _error "Rendering failed: $output"
+        fi
+    done
+}
+
+_render_prefix() {
+    local prefix
+    local renderfile="${!#}"
+    local ext=${renderfile##*.}
+    _debug 1 "RENDER: Derive render prefix from extension '$ext'"
+    local prefix="${EXT_TO_RENDER_PREFIX[$ext]}"
+    while [[ "$1" = -* ]];do
+        case "$1" in
+            -p|--prefix) prefix="$2"; shift ;;
+            *) _error "Unknown option '$1' to _render_prefix" ;;
+        esac
+        shift
+    done
+    if [[ -z "$prefix" ]];then
+        _debug 0 "Cannot derive render prefix from '$ext'."
+        _debug 0 "Falling back to renderprefix='##'."
+        _debug 0 "Define EXT_TO_RENDER_PREFIX[$ext]='...' to override.\n"
+        prefix='##'
+    fi
+    awk '{gsub("__CURLINE__",NR,$0);print}' "$1" \
+        | grep "^\s*$prefix" \
+        | sed "s/^\s*$prefix\s\?//"
+}
+
+_render_jade() {
+    local renderfile="${!#}"
+    # shellcheck disable=2094
+    jade -p "$renderfile" -P < "$renderfile" |sed -n '2,$p'
+}
+
+#man: ## OPTIONS
+while [[ "$1" = -* ]];do
+    case "$1" in
+        #help:|-f,--func FUNCTION|Render function
+        -f|--func*) renderfunc="$2"; shift ;;
+        *) break ;;
+    esac
+    shift
+done
+load_profile
+render "$@"
