@@ -1,3 +1,0 @@
-[submodule "deps/shlog"]
-	path = deps/shlog
-	url = https://github.com/kba/shlog

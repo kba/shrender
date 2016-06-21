@@ -9,7 +9,7 @@ set -e
 
 SHRENDERSHARE="$(dirname "$0")"
 # logging
-PATH="$PATH:$SHRENDERSHARE/deps/shlog/dist"
+PATH="$PATH:$SHRENDERSHARE/deps/bin"
 source "$(which shlog)"
 
 # Extension to render function (default is prefix)
@@ -22,17 +22,18 @@ declare -Agx EXT_TO_RENDER_FUNC=(
     [pug]="jade"
 )
 
+typeset -axg SHRENDER_PATH=("$PWD")
+export OUTPUT_PREFIX OUTPUT_SUFFIX INPUT_PREFIX INPUT_SUFFIX COLUMNIZE COLUMN_CHAR SHRENDER_DEFAULT_PREFIX
+SHRENDER_DEFAULT_PREFIX='## \?'
+
 # Extension to render prefix
 declare -Axg EXT_TO_RENDER_PREFIX=(
-    [sh]="#"
-    [zsh]="#"
-    [bash]="#"
+    [sh]="$SHRENDER_DEFAULT_PREFIX"
+    [zsh]="$SHRENDER_DEFAULT_PREFIX"
+    [bash]="$SHRENDER_DEFAULT_PREFIX"
     [java]="\*\* \?"
     [cpp]="\*\* \?"
 )
-
-typeset -axg SHRENDER_PATH=("$PWD")
-export OUTPUT_PREFIX OUTPUT_SUFFIX INPUT_PREFIX INPUT_SUFFIX COLUMNIZE COLUMN_CHAR
 
 
 shrender() {
@@ -44,19 +45,21 @@ shrender() {
     #help:  
     while [[ "$1" = -* ]];do
         case "$1" in
-            #help:\t-f --function \e[33mFUNC[0m\t\tRender function
+            #help:\t-f  --function FUNC         Show help
+            -h|--help) shrender::usage; shift ;;
+            #help:\t-f  --function FUNC         Render function
             -f|--func*) renderfunc="$2"; shift ;;
-            #help:\t-p --path \e[33mPATH[0m\t\t\tAdd path to shrenders search path
+            #help:\t-p  --path PATH             Add path to shrenders search path
             -p|--path) SHRENDER_PATH+=("$2"); shift ;;
-            #help:\t-c --column \e[33mCHAR[0m\t\tColumnize at this char.
+            #help:\t-c  --column CHAR           Columnize at this char.
             -c|--column) COLUMNIZE=true; COLUMN_CHAR="$2"; shift ;;
-            #help:\t-ip --input-prefix \e[33mPREFIX[0m\tThe pattern to filter input lines with.
+            #help:\t-ip --input-prefix PREFIX   The pattern to filter input lines with.
             -ip|--input-prefix) INPUT_PREFIX="$2"; shift ;;
-            #help:\t-is --input-suffix \e[33mSUFFIX[0m\tOptional suffix in input lines to be removed
+            #help:\t-is --input-suffix SUFFIX   Optional suffix in input lines to be removed
             -is|--input-suffix) INPUT_SUFFIX="$2"; shift ;;
-            #help:\t-op --output-prefix \e[33mPREFIX\e[0m\tPrepend output lines with this string.
+            #help:\t-op --output-prefix PREFIX  Prepend output lines with this string.
             -op|--output-prefix) OUTPUT_PREFIX="$2"; shift ;;
-            #help:\t-os --output-suffix \e[33mSUFFIX[0m\tAppend this string to output lines.
+            #help:\t-os --output-suffix SUFFIX  Append this string to output lines.
             -os|--output-suffix) OUTPUT_SUFFIX+="$2"; shift ;;
             *) shlog -l error -x 87 "No such option '$1'" ;;
         esac
@@ -83,9 +86,9 @@ shrender() {
         trap "rm $tempfile" EXIT INT TERM
         awk "{
             gsub(\"__CURLINE__\",NR,\$0);
-            gsub(\"__CURFILE__\",\"$renderfile\",\$0);
             print
         }" < "$renderfile_abs" > "$tempfile"
+        sed -i "s,__CURFILE__,$renderfile," "$tempfile"
         output=$(
             local IFS=$'\n'
             local line;
@@ -172,7 +175,7 @@ shrender::prefix () {
         shlog -l debug "Cannot derive render prefix from '$ext'."
         shlog -l debug "Falling back to renderprefix='##'."
         shlog -l debug "Define EXT_TO_RENDER_PREFIX[$ext]='...' to override.\n"
-        INPUT_PREFIX='##'
+        INPUT_PREFIX=$SHRENDER_DEFAULT_PREFIX
     fi
     shlog -l info "Rendering '$renderfile' by prefix '$INPUT_PREFIX'"
     grep "^\s*$INPUT_PREFIX" "$1" | sed "s/^\s*$INPUT_PREFIX//"

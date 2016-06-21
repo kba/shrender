@@ -9,10 +9,13 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 SHAREDIR=$(PREFIX)/share/$(SCRIPT)
 
-.PHONY: test
+.PHONY: test deps
 
 test:
-	SHLOG_USE_STYLES_STDERR=false SHLOG_FORMAT="    #%level %module %msg" ./test/tsht |tap-spec
+	SHLOG_TERM=debug SHLOG_FORMAT="    #%level %module %msg" ./test/tsht
+
+deps:
+	bpkg getdeps
 
 install: 
 	$(MKDIR) $(BINDIR)

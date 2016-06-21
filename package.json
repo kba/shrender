@@ -1,0 +1,14 @@
+{
+    "name": "shrender",
+    "version": "0.0.1",
+    "description": "Turn source code into documentation",
+    "scripts": ["shrender"],
+    "files": ["package.json"],
+    "dependencies": {
+        "kba/shlog": "master"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kba/shrender"
+    }
+}
