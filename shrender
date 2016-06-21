@@ -24,9 +24,9 @@ declare -Agx EXT_TO_RENDER_FUNC=(
 
 # Extension to render prefix
 declare -Axg EXT_TO_RENDER_PREFIX=(
-    [sh]="## \?"
-    [zsh]="## \?"
-    [bash]="## \?"
+    [sh]="#"
+    [zsh]="#"
+    [bash]="#"
     [java]="\*\* \?"
     [cpp]="\*\* \?"
 )
