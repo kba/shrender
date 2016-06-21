@@ -5,13 +5,12 @@
 ## The render method is determined by the file extension, see 
 ## [RENDER STYLES](#render-styles) for a list of render methods
 
-SHRENDERSHARE="$(dirname "$0")"
+set -e
 
 # logging
-export PATH="$PATH:$SHRENDERSHARE/deps/shlog/dist"
 source "$(which shlog)"
 
-# Extension to XY mappings
+# Extension to render function (default is prefix)
 declare -Agx EXT_TO_RENDER_FUNC=(
     [md]="cat"
     [markdown]="cat"
@@ -20,24 +19,24 @@ declare -Agx EXT_TO_RENDER_FUNC=(
     [jade]="jade"
     [pug]="jade"
 )
+
+# Extension to render prefix
+declare -Axg EXT_TO_RENDER_PREFIX=(
+    [sh]="## \?"
+    [zsh]="## \?"
+    [bash]="## \?"
+    [java]="\*\* \?"
+    [cpp]="\*\* \?"
+)
+
 typeset -axg SHRENDER_PATH=("$PWD")
-
-source "$SHRENDERSHARE/shrender-cat"
-source "$SHRENDERSHARE/shrender-jade"
-source "$SHRENDERSHARE/shrender-prefix"
-
-set -e
 export OUTPUT_PREFIX OUTPUT_SUFFIX INPUT_PREFIX INPUT_SUFFIX COLUMNIZE COLUMN_CHAR
 
-#help:
-#help:Usage: shrender [opts...] [render-opts] <file-to-render>...
-#help:
-usage () {
-    SHLOG_SILENT=true bash "$0" -ip '#help:' "$0"
-}
 
 shrender() {
     local renderfile renderfunc renderfile_abs 
+    #help:
+    #help:Usage: shrender [opts...] [render-opts] <file-to-render>...
     #help:  
     #help:    Options:
     #help:  
@@ -49,9 +48,9 @@ shrender() {
             -p|--path) SHRENDER_PATH+=("$2"); shift ;;
             #help:\t-c --column \e[33mCHAR[0m\t\tColumnize at this char.
             -c|--column) COLUMNIZE=true; COLUMN_CHAR="$2"; shift ;;
-            #help:\t-is --input-suffix \e[33mSUFFIX[0m\tThe pattern to filter input lines with.
+            #help:\t-ip --input-prefix \e[33mPREFIX[0m\tThe pattern to filter input lines with.
             -ip|--input-prefix) INPUT_PREFIX="$2"; shift ;;
-            #help:\t-is --input-suffix \e[33mPREFIX[0m\tOptional suffix in input lines to be removed
+            #help:\t-is --input-suffix \e[33mSUFFIX[0m\tOptional suffix in input lines to be removed
             -is|--input-suffix) INPUT_SUFFIX="$2"; shift ;;
             #help:\t-op --output-prefix \e[33mPREFIX\e[0m\tPrepend output lines with this string.
             -op|--output-prefix) OUTPUT_PREFIX="$2"; shift ;;
@@ -61,22 +60,22 @@ shrender() {
         esac
         shift
     done
-    [[ -z "$1" ]] && { usage; exit; }
-    shrender-load-profile 
+    [[ -z "$1" ]] && { shrender::usage; exit; }
+    shrender::load_profile 
 
     for renderfile in "$@";do
-        renderfile_abs=$(shrender-resolve-file "$renderfile")
+        renderfile_abs=$(shrender::resolve_file "$renderfile")
         if (( $? > 0 ));then
             shlog -l error -x $? "Failed to resolve '$renderfile'"
         fi
         if [[ -z "$renderfunc" ]];then
-            renderfunc="$(shrender-function-for-extension "$renderfile")"
+            renderfunc="$(shrender::function_for_extension "$renderfile")"
         fi
-        if ! declare -f "shrender-$renderfunc" >/dev/null;then
+        if ! declare -f "shrender::$renderfunc" >/dev/null;then
             shlog -l error -x 7 "No such render function '$renderfunc'."
         fi
         shlog -l debug "Rendering $renderfile_abs"
-        shlog -l info "shrender-$renderfunc '$renderfile_abs'"
+        shlog -l info "shrender::$renderfunc '$renderfile_abs'"
         tempfile=$(mktemp --tmpdir "shrender.XXXXX.$(basename "$renderfile"|sed 's/.*\.//')")
         # shellcheck disable=2064
         trap "rm $tempfile" EXIT INT TERM
@@ -88,7 +87,7 @@ shrender() {
         output=$(
             local IFS=$'\n'
             local line;
-            "shrender-$renderfunc" "$tempfile" |while read -r line;do
+            "shrender::$renderfunc" "$tempfile" |while read -r line;do
                 printf "%s%s%s\n" "$OUTPUT_PREFIX" "$line" "$OUTPUT_SUFFIX"
             done)
         if [[ ! -z "$COLUMN_CHAR" ]];then
@@ -101,14 +100,18 @@ shrender() {
     done
 }
 
-shrender-load-profile () {
+shrender::usage () {
+    SHLOG_SILENT=true bash "$0" -ip '#help:' "$0"
+}
+
+shrender::load_profile () {
     for profile in "$SHRENDERSHARE/shrender.profile" "/etc/default/shrender" "$PWD/.shrenderrc";do
         if [[ -e "$profile" ]];then source "$profile";fi
     done
     return
 }
 
-shrender-resolve-file() {
+shrender::resolve_file() {
     local f=$1
     if [[ -e "$f" ]];then
         echo "$f"
@@ -124,7 +127,7 @@ shrender-resolve-file() {
     shlog -l error -x 2 "No file found in includes: $renderfile"
 }
 
-shrender-function-for-extension() {
+shrender::function_for_extension() {
     local f="$1"
     local ext=$(basename "$f"|sed 's/.*\.//')
     shlog -l debug "Detecting render function by extension '$ext'"
@@ -134,6 +137,43 @@ shrender-function-for-extension() {
         renderfunc='prefix'
     fi
     echo "$renderfunc"
+}
+
+shrender::cat () {
+    cat "$1"
+}
+
+shrender::jade () {
+    export SHRENDER_JADE=${SHRENDER_JADE:-jade}
+    [[ -z "$1" ]] && { shrender::usage; exit; }
+    # shellcheck disable=2094
+    jade -p "$1" -P < "$1" | sed -n -e '2,$p' -e '$a \\n'
+}
+
+shrender::prefix () {
+    while [[ "$1" = -* ]];do
+        case "$1" in
+            *) shlog -l error -x 7 "Unknown option '$1' to shrender::prefix" ;;
+        esac
+        shift
+    done
+    [[ -z "$1" ]] && { shrender::usage; exit; }
+    shlog -l trace "Rendering '$1'"
+    local renderfile="$1"
+    if [[ -z "$INPUT_PREFIX" ]];then
+        local ext=${renderfile##*/}
+        ext=${ext##*.}
+        shlog -l debug "Derive render prefix from extension '$ext'"
+        INPUT_PREFIX="${EXT_TO_RENDER_PREFIX[$ext]}"
+    fi
+    if [[ -z "$INPUT_PREFIX" ]];then
+        shlog -l debug "Cannot derive render prefix from '$ext'."
+        shlog -l debug "Falling back to renderprefix='##'."
+        shlog -l debug "Define EXT_TO_RENDER_PREFIX[$ext]='...' to override.\n"
+        INPUT_PREFIX='##'
+    fi
+    shlog -l info "Rendering '$renderfile' by prefix '$INPUT_PREFIX'"
+    grep "^\s*$INPUT_PREFIX" "$1" | sed "s/^\s*$INPUT_PREFIX//"
 }
 
 

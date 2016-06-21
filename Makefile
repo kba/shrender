@@ -11,11 +11,11 @@ SHAREDIR=$(PREFIX)/share/$(SCRIPT)
 .PHONY: test
 
 install: 
-	$(MKDIR) $(SHAREDIR)
-	sed 's,^SHRENDERSHARE=.*,SHRENDERSHARE="$(SHAREDIR)",' $(SCRIPT) > $(BINDIR)/$(SCRIPT)
+	$(MKDIR) $(BINDIR)
+	$(CP) $(SCRIPT) $(BINDIR)
 	chmod a+x $(BINDIR)/$(SCRIPT)
 	$(MKDIR) $(SHAREDIR)
-	$(CP) -t $(SHAREDIR) deps $(wildcard shrender-*) LICENSE
+	$(CP) -t $(SHAREDIR) LICENSE deps
 
 uninstall:
 	$(RM) $(BINDIR)/$(SCRIPT)
