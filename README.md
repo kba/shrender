@@ -2,13 +2,15 @@
 
 Render code to documentation.
 
+[![Build Status](https://travis-ci.org/kba/shrender.svg?branch=master)](https://travis-ci.org/kba/shrender)
+
 <!-- BEGIN-BANNER -w '<pre>' '  markdown from source code</pre>' shrender -->
 <pre>
-     _                        _
- ___| |__  _ __ ___ _ __   __| | ___ _ __
+     _                        _           
+ ___| |__  _ __ ___ _ __   __| | ___ _ __ 
 / __| '_ \| '__/ _ \ '_ \ / _` |/ _ \ '__|
-\__ \ | | | | |  __/ | | | (_| |  __/ |
-|___/_| |_|_|  \___|_| |_|\__,_|\___|_|
+\__ \ | | | | |  __/ | | | (_| |  __/ |   
+|___/_| |_|_|  \___|_| |_|\__,_|\___|_|   
   markdown from source code</pre>
 
 <!-- END-BANNER -->
@@ -41,12 +43,12 @@ bpgk install kba/shrender [-g]
 ## USAGE
 
 <!-- BEGIN-EVAL ./shrender --help |sed 's,^,    ,' -->
-
+    
     Usage: shrender [opts...] [render-opts] <file-to-render>...
-
+      
         Options:
-
-    	-f  --function FUNC         Show help
+      
+    	-h  --help         Show help
     	-f  --function FUNC         Render function
     	-p  --path PATH             Add path to shrenders search path
     	-c  --column CHAR           Columnize at this char.
