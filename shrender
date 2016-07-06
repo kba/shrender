@@ -45,7 +45,7 @@ shrender() {
     #help:  
     while [[ "$1" = -* ]];do
         case "$1" in
-            #help:\t-f  --function FUNC         Show help
+            #help:\t-h  --help         Show help
             -h|--help) shrender::usage; shift ;;
             #help:\t-f  --function FUNC         Render function
             -f|--func*) renderfunc="$2"; shift ;;
@@ -152,7 +152,14 @@ shrender::jade () {
     export SHRENDER_JADE=${SHRENDER_JADE:-jade}
     [[ -z "$1" ]] && { shrender::usage; exit; }
     # shellcheck disable=2094
-    jade -p "$1" -P < "$1" | sed -n -e '2,$p' -e '$a \\n'
+    if which pug >/dev/null;then
+        jadeOutput=$(pug -p "$1" -P < "$1")
+    elif which jade >/dev/null;then
+        jadeOutput=$(jade -p "$1" -P < "$1")
+    else
+        jadeOutput=$(echo -ne "\n"; cat "$1")
+    fi
+    echo "$jadeOutput"| sed -n -e '2,$p' -e '$a \\n'
 }
 
 shrender::prefix () {

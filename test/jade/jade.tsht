@@ -5,4 +5,8 @@ BINARY="../../shrender"
 
 use colordiff
 
-equals_file "$($BINARY sample.jade)" expected "Render jade"
+if which jade >/dev/null;then
+    equals_file "$($BINARY sample.jade)" expected "Render jade"
+else
+    equals_file "$($BINARY sample.jade)" expected.nojade "Render jade"
+fi
