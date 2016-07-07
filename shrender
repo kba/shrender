@@ -92,7 +92,7 @@ shrender() {
         output=$(
             local IFS=$'\n'
             local line;
-            "shrender::$renderfunc" "$tempfile" |while read -r line;do
+            "shrender::$renderfunc" "$tempfile" "$renderfile" |while read -r line;do
                 printf "%s%s%s\n" "$OUTPUT_PREFIX" "$line" "$OUTPUT_SUFFIX"
             done)
         if [[ ! -z "$COLUMN_CHAR" ]];then
@@ -153,9 +153,9 @@ shrender::jade () {
     [[ -z "$1" ]] && { shrender::usage; exit; }
     # shellcheck disable=2094
     if which pug >/dev/null;then
-        jadeOutput=$(pug -p "$1" -P < "$1")
+        jadeOutput=$(pug -p "$2" -P < "$1")
     elif which jade >/dev/null;then
-        jadeOutput=$(jade -p "$1" -P < "$1")
+        jadeOutput=$(jade -p "$2" -P < "$1")
     else
         jadeOutput=$(echo -ne "\n"; cat "$1")
     fi
