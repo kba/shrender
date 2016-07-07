@@ -92,7 +92,7 @@ shrender() {
         output=$(
             local IFS=$'\n'
             local line;
-            "shrender::$renderfunc" "$tempfile" "$renderfile" |while read -r line;do
+            "shrender::$renderfunc" "$tempfile" "$renderfile_abs" |while read -r line;do
                 printf "%s%s%s\n" "$OUTPUT_PREFIX" "$line" "$OUTPUT_SUFFIX"
             done)
         if [[ ! -z "$COLUMN_CHAR" ]];then
@@ -151,12 +151,17 @@ shrender::cat () {
 shrender::jade () {
     export SHRENDER_JADE=${SHRENDER_JADE:-jade}
     [[ -z "$1" ]] && { shrender::usage; exit; }
-    # shellcheck disable=2094
+    jadeBinary=
     if which pug >/dev/null;then
-        jadeOutput=$(pug -p "$2" -P < "$1")
+        jadeBinary="pug"
     elif which jade >/dev/null;then
-        jadeOutput=$(jade -p "$2" -P < "$1")
+        jadeBinary="jade"
+    fi
+    if [[ ! -z "$jadeBinary" ]];then
+        shlog -l debug "jade command: $jadeBinary -p $2 -P < $1 (PWD: $PWD)"
+        jadeOutput=$($jadeBinary -p "$2" -P < "$1")
     else
+        shlog -l warn "jade/pug not installed, echoing input"
         jadeOutput=$(echo -ne "\n"; cat "$1")
     fi
     echo "$jadeOutput"| sed -n -e '2,$p' -e '$a \\n'
